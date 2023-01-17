@@ -1,7 +1,7 @@
 import json
 
 import discord
-from discord import Client, Intents, Interaction, TextChannel
+from discord import Client, Intents, Interaction
 from discord.app_commands import CommandTree, describe
 
 with open("settings.json", "r", encoding="utf-8") as settings_file:
