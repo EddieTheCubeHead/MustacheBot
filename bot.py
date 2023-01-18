@@ -25,7 +25,7 @@ class Bot(Client):
 
 
 def create_bot():
-    description = "Use /help or /summon to get help into your room"
+    description = "Use /help to get help into your room"
     intents = discord.Intents.default()
     return Bot(description, intents)
 
@@ -42,7 +42,7 @@ async def on_ready():
 @describe(room="The number or name of the room your team is in")
 async def get_help(interaction: Interaction, room: str):
     admin_channel = interaction.guild.get_channel(settings["admin_channel"])
-    await admin_channel.send(f"Help requested in room {room}")
+    await admin_channel.send(f"Help requested in the room {room}")
     await interaction.response.send_message("Help request sent to the organizers.", ephemeral=True)
 
 
