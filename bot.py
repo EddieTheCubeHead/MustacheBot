@@ -1,17 +1,23 @@
 import json
+import os
 
 import discord
-from discord import Client, Intents, Interaction
+from discord import Client, Intents, Interaction, Role, User, Embed, Member
 from discord.app_commands import CommandTree, describe
-
-with open("settings.json", "r", encoding="utf-8") as settings_file:
-    settings = json.loads(settings_file.read())
-
-with open("secrets.json", "r", encoding="utf-8") as settings_file:
-    token = json.loads(settings_file.read())["token"]
+from discord.app_commands.checks import has_permissions
 
 
-_GUILD = discord.Object(id=settings["guild"])
+def get_config(config_name: str) -> str:
+    config = os.getenv(config_name, None)
+    if config is None:
+        file_path = os.path.join(os.path.dirname(__file__), "settings.json")
+        with open(file_path, "r", encoding="utf-8") as config_file:
+            config = json.loads(config_file.read())[config_name]
+    return str(config)
+
+
+_GUILD = discord.Object(id=int(get_config("guild")))
+_TEAM_ROOMS = {}
 
 
 class Bot(Client):
@@ -38,13 +44,30 @@ async def on_ready():
     print("Connected")
 
 
+@bot.tree.command()
+@has_permissions(manage_roles=True)
+async def register(interaction: Interaction, role: Role, room: str):
+    _TEAM_ROOMS[role] = room
+    await interaction.response.send_message(f"Room {room} assigned to role {role.name}")
+
+
 @bot.tree.command(description="Ask for help", name="help")
-@describe(room="The number or name of the room your team is in")
-async def get_help(interaction: Interaction, room: str):
-    admin_channel = interaction.guild.get_channel(settings["admin_channel"])
-    await admin_channel.send(f"Help requested in the room {room}")
+@describe(message="Short description of your problem, can be empty")
+async def get_help(interaction: Interaction, message: str):
+    admin_channel = interaction.guild.get_channel(int(get_config("admin_channel")))
+    room = _get_room(interaction.user)
+    embed = Embed(title=f"Room {room}", description=message)
+    embed.set_author(name="Help request")
+    await admin_channel.send(embed=embed)
     await interaction.response.send_message("Help request sent to the organizers.", ephemeral=True)
 
 
+def _get_room(user: Member) -> str:
+    for role in user.roles:
+        if role in _TEAM_ROOMS:
+            return _TEAM_ROOMS[role]
+    return "unknown"
+
+
 if __name__ == '__main__':
-    bot.run(token)
+    bot.run(get_config("token"))
